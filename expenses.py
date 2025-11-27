@@ -1,7 +1,7 @@
 import argparse
 import json
 from tabulate import tabulate
-import time
+from datetime import datetime
 
 class Expense():
     def __init__(self):
@@ -27,6 +27,9 @@ class Expense():
         del_p.set_defaults(func=self.delete)
 
         list_p = sub.add_parser("list")
+        list_p.add_argument('-y', '-year', action="store", required=False)
+        list_p.add_argument('-m', '-month', action="store", required=False)
+        list_p.add_argument('-d', '-day', action="store", required=False)
         list_p.set_defaults(func=self.list)
 
         summary_p = sub.add_parser("summary")
@@ -47,8 +50,7 @@ class Expense():
         except FileNotFoundError:
             raise FileNotFoundError("Could not find file")
 
-    def table_properties(self):
-        data = self.data
+    def table_properties(self, data):
         tab_data = []
         headers = ['Id', 'Time', 'Description', 'Amount']
         for item in data:
@@ -68,9 +70,11 @@ class Expense():
 
     def add(self, args):
         data = self.data
+        now = datetime.now()
+
         new_data = {
             "id": self.create_id(),
-            "time": time.ctime(),
+            "time": now.strftime("%Y%m%d"),
             "des": args.des,
             "amt": args.amt
         }
@@ -80,19 +84,21 @@ class Expense():
 
     def update(self, args):
         data = self.data
-
+        now = datetime.now()
         new_data = {
             "id": args.id,
-            "time": time.ctime(),
+            "time": 0,
             "des": args.ndes,
             "amt": args.namt
         }
 
         for idx, item in enumerate(data):
             if item['id'] == args.id:
+                original_time = data[idx]['time']
                 data[idx] = new_data
-
-        self.overwrite_file(data, 'expenses-data.json')
+                data[idx]['time'] = original_time
+                
+        self.overwrite_file(data, 'expenses_data.json')
                 
     def delete(self, args):
         data = self.data
@@ -104,20 +110,36 @@ class Expense():
         self.overwrite_file(data, 'expenses_data.json')
 
     def list(self, args):
-        tab_props = self.table_properties()
+        if args.m:
+            data = self.filter_month(args.m)
+        else:
+            data = self.data
+
+        tab_props = self.table_properties(data)
 
         table = tabulate(tab_props['tab_data'], headers=tab_props['header'], tablefmt="grid")
         print(table)
 
+    def filter_month(self, given_month):
+        data = self.data
+        filtered_list = []
+        for idx, item in enumerate(data):
+            month = item['time'][4:6]
+
+            if month == given_month:
+                filtered_list.append(data[idx])
+
+        return filtered_list
+
     def summary(self, args):
-        tab_props = self.table_properties()
+        tab_props = self.table_properties(self.data)
         data = tab_props['data']
-        total_amount = 0
+        total_amount = 0.0
 
         for item in data:
-            total_amount += item['amt']
+            total_amount += float(item['amt'])
         
-        print(f"Total Expenses Amount: ${total_amount}")
+        print(f"Total Expenses Amount: ${total_amount:.2f}")
 
     def run(self):
         args = self.parser.parse_args()
