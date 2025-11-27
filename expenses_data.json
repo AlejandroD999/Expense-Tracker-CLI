@@ -598,11 +598,5 @@
         "time": "20310220",
         "des": "cheese_100",
         "amt": 6.0
-    },
-    {
-        "id": "101",
-        "time": "20251127",
-        "des": "bought one honda car",
-        "amt": 30000.0
     }
 ]
